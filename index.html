@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beşiktaş Fan Portalı</title>
+<style>
+*{box-sizing:border-box}
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:linear-gradient(135deg,#050505,#18181b);
+color:white;
+}
+.container{
+width:min(1150px,92%);
+margin:auto;
+padding:30px 0;
+}
+.hero,.panel,.card{
+background:rgba(255,255,255,.07);
+border:1px solid rgba(255,255,255,.12);
+border-radius:28px;
+backdrop-filter:blur(18px);
+box-shadow:0 20px 60px rgba(0,0,0,.4);
+}
+.hero{
+padding:36px;
+margin-bottom:24px;
+}
+h1{
+font-size:clamp(3rem,8vw,6rem);
+margin:0;
+letter-spacing:-4px;
+}
+p{color:#a1a1aa}
+.grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:22px;
+margin-top:22px;
+}
+.panel{
+padding:22px;
+}
+.matches{
+display:grid;
+gap:14px;
+margin-top:18px;
+}
+.card{
+padding:18px;
+}
+.badge{
+display:inline-block;
+padding:8px 12px;
+border-radius:999px;
+background:rgba(225,29,72,.2);
+border:1px solid rgba(225,29,72,.35);
+margin-bottom:16px;
+}
+.status{
+margin-top:14px;
+font-weight:700;
+}
+.loading{color:#fbbf24}
+.ok{color:#22c55e}
+.err{color:#ef4444}
+.stats{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:16px;
+margin-top:22px;
+}
+.stat{
+background:rgba(255,255,255,.07);
+padding:18px;
+border-radius:24px;
+border:1px solid rgba(255,255,255,.12);
+}
+.stat strong{
+display:block;
+font-size:2rem;
+margin-top:10px;
+}
+@media(max-width:900px){
+.grid,.stats{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+<span class="badge">GitHub Pages + API-Football</span>
+<h1>Beşiktaş Fan Portalı</h1>
+<p>Gerçek API verisi ile çalışan Beşiktaş portalı.</p>
+
+<div class="stats">
+<div class="stat">
+<span>Takım</span>
+<strong>Beşiktaş JK</strong>
+</div>
+
+<div class="stat">
+<span>Lig</span>
+<strong>Süper Lig</strong>
+</div>
+
+<div class="stat">
+<span>Kaynak</span>
+<strong id="sourceText">API</strong>
+</div>
+
+<div class="stat">
+<span>Durum</span>
+<strong id="statusMini">Bekleniyor</strong>
+</div>
+</div>
+
+<div id="status" class="status loading">API bağlantısı kuruluyor...</div>
+</div>
+
+<div class="grid">
+<div class="panel">
+<h2>Sıradaki Maçlar</h2>
+<div id="nextMatches" class="matches"></div>
+</div>
+
+<div class="panel">
+<h2>Son Maçlar</h2>
+<div id="lastMatches" class="matches"></div>
+</div>
+</div>
+
+</div>
+
+<script>
+const API_KEY = "c698852951bb3a60cd0673ca1f465d41";
+const TEAM_ID = 549;
+
+function setStatus(text,type){
+const el = document.getElementById("status");
+el.textContent = text;
+el.className = "status " + type;
+document.getElementById("statusMini").textContent = type === "ok" ? "Canlı" : "Hata";
+}
+
+function createCard(home,away,date,score="VS"){
+return `
+<div class="card">
+<strong>${home} vs ${away}</strong>
+<p>${new Date(date).toLocaleString("tr-TR")}</p>
+<div style="margin-top:10px;font-weight:900;">${score}</div>
+</div>
+`;
+}
+
+async function loadData(){
+try{
+setStatus("Canlı veri alınıyor...","loading");
+
+const nextRes = await fetch(
+`https://v3.football.api-sports.io/fixtures?team=${TEAM_ID}&next=5`,
+{
+headers:{
+"x-apisports-key":API_KEY
+}
+}
+);
+
+const nextData = await nextRes.json();
+
+const lastRes = await fetch(
+`https://v3.football.api-sports.io/fixtures?team=${TEAM_ID}&last=5`,
+{
+headers:{
+"x-apisports-key":API_KEY
+}
+}
+);
+
+const lastData = await lastRes.json();
+
+const nextBox = document.getElementById("nextMatches");
+const lastBox = document.getElementById("lastMatches");
+
+nextBox.innerHTML = "";
+lastBox.innerHTML = "";
+
+(nextData.response || []).forEach(match => {
+nextBox.innerHTML += createCard(
+match.teams.home.name,
+match.teams.away.name,
+match.fixture.date
+);
+});
+
+(lastData.response || []).forEach(match => {
+const homeGoals = match.goals.home ?? "-";
+const awayGoals = match.goals.away ?? "-";
+
+lastBox.innerHTML += createCard(
+match.teams.home.name,
+match.teams.away.name,
+match.fixture.date,
+`${homeGoals} - ${awayGoals}`
+);
+});
+
+setStatus("Gerçek API verisi başarıyla yüklendi.","ok");
+
+}catch(err){
+console.error(err);
+document.getElementById("sourceText").textContent = "Yok";
+setStatus("API verisi alınamadı.","err");
+}
+}
+
+loadData();
+</script>
+
+</body>
+</html>
